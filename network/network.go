@@ -33,7 +33,7 @@ func New(numInputs, numOutputs, numHiddenNeurons int, r *rand.Rand) *Network {
 	return &Network{numInputs, numOutputs, numHiddenNeurons, neuronValues, neuronWeights}
 }
 
-func (net *Network) Eval(input InputTranslator, output OutputTranslator) {
+func (net *Network) Activate(input InputTranslator, output OutputTranslator) {
 	inputs := input.TransInputs()
 	numNeurons := len(net.neuronValues)
 	newNeuronValues := make([]float64, numNeurons)
