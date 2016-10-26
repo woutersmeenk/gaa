@@ -1,7 +1,6 @@
 package sim
 
 import (
-	"fmt"
 	"gaa/network"
 	"gaa/svg"
 	"image/color"
