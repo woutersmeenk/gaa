@@ -4,26 +4,29 @@ import (
 	"gaa/network"
 	"gaa/svg"
 	"image/color"
-	"io"
 	"math"
 )
 
 const (
-	imageHeight = 500
-	imageWidth  = 500
-	steps       = 1000
+	NetworkInputs  = 3
+	NetworkOutputs = 8
+	imageHeight    = 500
+	imageWidth     = 500
+	steps          = 1000
 )
 
-type networkInput struct {
-	x, y float64
-	bias float64
+type simState struct {
+	x, y   float64
+	bias   float64 // always 1
+	dx, dy float64
 }
 
-func (input *networkInput) TransInputs() []float64 {
+func (state *simState) TransInputs() []float64 {
+	x, y := wrappedLoc(state.x, state.y)
 	result := []float64{
-		(input.x/imageHeight*2 - 1),
-		(input.y/imageWidth*2 - 1),
-		input.bias,
+		(x/imageWidth*2 - 1),
+		(y/imageHeight*2 - 1),
+		state.bias,
 	}
 	return result
 }
@@ -36,20 +39,15 @@ type networkOutput struct {
 }
 
 func (output *networkOutput) TransOutputs(outputSlice []float64) {
-	output.dx = float64(outputSlice[0])
-	output.dy = float64(outputSlice[1])
+	output.dx = outputSlice[0] * 5
+	output.dy = outputSlice[1] * 5
 	output.acceleration = outputSlice[2] > 0
-	r := uint8(((outputSlice[3] + 1) / 2) * 256)
-	g := uint8(((outputSlice[4] + 1) / 2) * 256)
-	b := uint8(((outputSlice[5] + 1) / 2) * 256)
-	a := uint8(((outputSlice[6] + 1) / 2) * 256)
+	r := uint8(((outputSlice[3] + 1) / 2) * 255)
+	g := uint8(((outputSlice[4] + 1) / 2) * 255)
+	b := uint8(((outputSlice[5] + 1) / 2) * 255)
+	a := uint8(((outputSlice[6] + 1) / 2) * 255)
 	output.color = color.RGBA{r, g, b, a}
 	output.width = ((outputSlice[7] + 1) / 2) * 10
-}
-
-type simState struct {
-	x, y   float64
-	dx, dy float64
 }
 
 func performAction(output *networkOutput, state *simState, svg svg.SVG) {
@@ -57,17 +55,34 @@ func performAction(output *networkOutput, state *simState, svg svg.SVG) {
 	if output.acceleration {
 		state.dx += output.dx
 		state.dy += output.dy
+		if state.dy > 5 {
+			state.dy = 5
+		}
+		if state.dy < -5 {
+			state.dy = -5
+		}
+		if state.dx > 5 {
+			state.dx = 5
+		}
+		if state.dx < -5 {
+			state.dx = -5
+		}
 	} else {
 		state.dx = output.dx
 		state.dy = output.dy
 	}
 	state.x += state.dx
 	state.y += state.dy
-	x1, y1 := modPos(oldX, imageWidth), modPos(oldY, imageHeight)
-	x2, y2 := modPos(state.x, imageWidth), modPos(state.y, imageHeight)
+	x1, y1 := wrappedLoc(oldX, oldY)
+	x2, y2 := wrappedLoc(state.x, state.y)
 	width := output.width
 	r, g, b, a := output.color.R, output.color.G, output.color.B, output.color.A
 	svg.Line(x1, y1, x2, y2, width, r, g, b, a)
+
+}
+
+func wrappedLoc(x, y float64) (float64, float64) {
+	return modPos(x, imageWidth), modPos(y, imageHeight)
 }
 
 func modPos(n float64, d float64) float64 {
@@ -78,17 +93,15 @@ func modPos(n float64, d float64) float64 {
 	return result
 }
 
-func Simulate(net *network.Network, writer io.Writer) {
-	svg := svg.New(writer, imageWidth, imageHeight)
+func Simulate(net network.Network, s svg.SVG) {
+	s.Open(imageWidth, imageHeight)
+	defer s.Close()
 	initialX := imageWidth / 2.0
 	initialY := imageHeight / 2.0
-	state := &simState{x: initialX, y: initialY, dx: 0, dy: 0}
-	input := &networkInput{x: initialX, y: initialY, bias: 1}
+	state := &simState{x: initialX, y: initialY, bias: 1, dx: 0, dy: 0}
 	for t := 0; t < steps; t++ {
 		var output = &networkOutput{}
-		net.Activate(input, output)
-		performAction(output, state, svg)
-		input.x, input.y = state.x, state.y
+		net.Activate(state, output)
+		performAction(output, state, s)
 	}
-	svg.Close()
 }
