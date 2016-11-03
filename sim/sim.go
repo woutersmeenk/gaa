@@ -13,11 +13,12 @@ const (
 	imageHeight    = 500
 	imageWidth     = 500
 	steps          = 1000
+	velocityLimit  = 5
+	maxWidth       = 30
 )
 
 type simState struct {
 	x, y   float64
-	bias   float64 // always 1
 	dx, dy float64
 }
 
@@ -26,7 +27,7 @@ func (state *simState) TransInputs() []float64 {
 	result := []float64{
 		(x/imageWidth*2 - 1),
 		(y/imageHeight*2 - 1),
-		state.bias,
+		1,
 	}
 	return result
 }
@@ -39,15 +40,15 @@ type networkOutput struct {
 }
 
 func (output *networkOutput) TransOutputs(outputSlice []float64) {
-	output.dx = outputSlice[0] * 5
-	output.dy = outputSlice[1] * 5
+	output.dx = outputSlice[0] * velocityLimit
+	output.dy = outputSlice[1] * velocityLimit
 	output.acceleration = outputSlice[2] > 0
 	r := uint8(((outputSlice[3] + 1) / 2) * 255)
 	g := uint8(((outputSlice[4] + 1) / 2) * 255)
 	b := uint8(((outputSlice[5] + 1) / 2) * 255)
 	a := uint8(((outputSlice[6] + 1) / 2) * 255)
 	output.color = color.RGBA{r, g, b, a}
-	output.width = ((outputSlice[7] + 1) / 2) * 10
+	output.width = ((outputSlice[7] + 1) / 2) * maxWidth
 }
 
 func performAction(output *networkOutput, state *simState, svg svg.SVG) {
@@ -55,18 +56,8 @@ func performAction(output *networkOutput, state *simState, svg svg.SVG) {
 	if output.acceleration {
 		state.dx += output.dx
 		state.dy += output.dy
-		if state.dy > 5 {
-			state.dy = 5
-		}
-		if state.dy < -5 {
-			state.dy = -5
-		}
-		if state.dx > 5 {
-			state.dx = 5
-		}
-		if state.dx < -5 {
-			state.dx = -5
-		}
+		state.dx = applyLimit(state.dx, velocityLimit)
+		state.dy = applyLimit(state.dy, velocityLimit)
 	} else {
 		state.dx = output.dx
 		state.dy = output.dy
@@ -77,8 +68,22 @@ func performAction(output *networkOutput, state *simState, svg svg.SVG) {
 	x2, y2 := wrappedLoc(state.x, state.y)
 	width := output.width
 	r, g, b, a := output.color.R, output.color.G, output.color.B, output.color.A
-	svg.Line(x1, y1, x2, y2, width, r, g, b, a)
+	// We draw the line in two pieces (if needed) to prevent drawing accros the image border
+	// forward from the current location and backward from the next location
+	svg.Line(x1, y1, x1+state.dx, y1+state.dy, width, r, g, b, a)
+	if x1+state.dx == x2 && y1+state.dy == y2 {
+		svg.Line(x2-state.dx, y2-state.dy, x2, y2, width, r, g, b, a)
+	}
+}
 
+func applyLimit(val, limit float64) float64 {
+	if val > limit {
+		return limit
+	}
+	if val < -limit {
+		return limit
+	}
+	return val
 }
 
 func wrappedLoc(x, y float64) (float64, float64) {
@@ -98,7 +103,7 @@ func Simulate(net network.Network, s svg.SVG) {
 	defer s.Close()
 	initialX := imageWidth / 2.0
 	initialY := imageHeight / 2.0
-	state := &simState{x: initialX, y: initialY, bias: 1, dx: 0, dy: 0}
+	state := &simState{x: initialX, y: initialY, dx: 0, dy: 0}
 	for t := 0; t < steps; t++ {
 		var output = &networkOutput{}
 		net.Activate(state, output)

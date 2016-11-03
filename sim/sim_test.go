@@ -34,11 +34,11 @@ var transInputTests = []struct {
 	state simState
 	res   []float64
 }{
-	{simState{-1, -1, 1, 0, 0}, []float64{1, 1, 1}},
-	{simState{0, 0, 1, 0, 0}, []float64{-1, -1, 1}},
-	{simState{imageWidth - 1, imageHeight - 1, 0.436, 0, 0}, []float64{1, 1, 0.436}},
-	{simState{imageWidth / 2, imageHeight / 2, -1, 0, 0}, []float64{0, 0, -1}},
-	{simState{imageWidth, imageHeight, 1, 0, 0}, []float64{-1, -1, 1}},
+	{simState{-1, -1, 0, 0}, []float64{1, 1, 1}},
+	{simState{0, 0, 0, 0}, []float64{-1, -1, 1}},
+	{simState{imageWidth - 1, imageHeight - 1, 0, 0}, []float64{1, 1, 1}},
+	{simState{imageWidth / 2, imageHeight / 2, 0, 0}, []float64{0, 0, 1}},
+	{simState{imageWidth, imageHeight, 0, 0}, []float64{-1, -1, 1}},
 }
 
 func TestTransInputs(t *testing.T) {
@@ -54,9 +54,9 @@ var transOutputTests = []struct {
 	output []float64
 	res    networkOutput
 }{
-	{[]float64{-1, -1, -1, -1, -1, -1, -1, -1}, networkOutput{-1, -1, false, color.RGBA{0, 0, 0, 0}, 0}},
-	{[]float64{1, 1, 1, 1, 1, 1, 1, 1}, networkOutput{1, 1, true, color.RGBA{255, 255, 255, 255}, 10}},
-	{[]float64{0, 0, 0, 0, 0, 0, 0, 0}, networkOutput{0, 0, false, color.RGBA{127, 127, 127, 127}, 5}},
+	{[]float64{-1, -1, -1, -1, -1, -1, -1, -1}, networkOutput{-velocityLimit, -velocityLimit, false, color.RGBA{0, 0, 0, 0}, 0}},
+	{[]float64{1, 1, 1, 1, 1, 1, 1, 1}, networkOutput{velocityLimit, velocityLimit, true, color.RGBA{255, 255, 255, 255}, maxWidth}},
+	{[]float64{0, 0, 0, 0, 0, 0, 0, 0}, networkOutput{0, 0, false, color.RGBA{127, 127, 127, 127}, maxWidth / 2}},
 }
 
 func TestTransOutput(t *testing.T) {
