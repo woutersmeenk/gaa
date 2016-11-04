@@ -1,8 +1,8 @@
 package sim
 
 import (
+	"gaa/canvas"
 	"gaa/network"
-	"gaa/svg"
 	"image/color"
 	"math"
 )
@@ -51,7 +51,7 @@ func (output *networkOutput) TransOutputs(outputSlice []float64) {
 	output.width = ((outputSlice[7] + 1) / 2) * maxWidth
 }
 
-func performAction(output *networkOutput, state *simState, svg svg.SVG) {
+func performAction(output *networkOutput, state *simState, c canvas.Canvas) {
 	oldX, oldY := state.x, state.y
 	if output.acceleration {
 		state.dx += output.dx
@@ -70,9 +70,9 @@ func performAction(output *networkOutput, state *simState, svg svg.SVG) {
 	r, g, b, a := output.color.R, output.color.G, output.color.B, output.color.A
 	// We draw the line in two pieces (if needed) to prevent drawing accros the image border
 	// forward from the current location and backward from the next location
-	svg.Line(x1, y1, x1+state.dx, y1+state.dy, width, r, g, b, a)
-	if x1+state.dx == x2 && y1+state.dy == y2 {
-		svg.Line(x2-state.dx, y2-state.dy, x2, y2, width, r, g, b, a)
+	c.Line(x1, y1, x1+state.dx, y1+state.dy, width, r, g, b, a)
+	if x1+state.dx != x2 || y1+state.dy != y2 {
+		c.Line(x2-state.dx, y2-state.dy, x2, y2, width, r, g, b, a)
 	}
 }
 
@@ -98,15 +98,15 @@ func modPos(n float64, d float64) float64 {
 	return result
 }
 
-func Simulate(net network.Network, s svg.SVG) {
-	s.Open(imageWidth, imageHeight)
-	defer s.Close()
+func Simulate(net network.Network, c canvas.Canvas) {
+	c.Open(imageWidth, imageHeight)
+	defer c.Close()
 	initialX := imageWidth / 2.0
 	initialY := imageHeight / 2.0
 	state := &simState{x: initialX, y: initialY, dx: 0, dy: 0}
 	for t := 0; t < steps; t++ {
 		var output = &networkOutput{}
 		net.Activate(state, output)
-		performAction(output, state, s)
+		performAction(output, state, c)
 	}
 }

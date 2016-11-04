@@ -3,9 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"gaa/canvas"
 	"gaa/network"
 	"gaa/sim"
-	"gaa/svg"
 	"math/rand"
 	"os"
 )
@@ -27,6 +27,6 @@ func main() {
 		defer f.Close()
 		writer := bufio.NewWriter(f)
 		defer writer.Flush()
-		sim.Simulate(net, svg.New(writer))
+		sim.Simulate(net, canvas.New(writer))
 	}
 }

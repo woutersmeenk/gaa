@@ -1,8 +1,8 @@
 package sim
 
 import (
+	"gaa/canvas"
 	"gaa/network"
-	"gaa/svg"
 	"image/color"
 	"io/ioutil"
 	"math/rand"
@@ -73,6 +73,6 @@ func BenchmarkSimulate(b *testing.B) {
 	r := rand.New(rand.NewSource(328932186))
 	for n := 0; n < b.N; n++ {
 		net := network.New(3, 8, 10, r)
-		Simulate(net, svg.New(ioutil.Discard))
+		Simulate(net, canvas.New(ioutil.Discard))
 	}
 }
