@@ -20,7 +20,7 @@ func New(writer io.Writer) SVG {
 }
 
 func (s svg) Open(width, height int) {
-	fmt.Fprintf(s.writer, "<svg width=\"%v\" height=\"%v\">\n", width, height)
+	fmt.Fprintf(s.writer, "<svg width=\"%v\" height=\"%v\" xmlns=\"http://www.w3.org/2000/svg\">\n", width, height)
 }
 
 func (s svg) Line(x1, y1, x2, y2, width float64, r, g, b, a uint8) {

@@ -12,7 +12,7 @@ import (
 
 const (
 	hiddenNeurons = 10
-	seed          = 5135264217
+	seed          = 64877563487
 )
 
 func main() {
