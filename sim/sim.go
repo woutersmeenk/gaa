@@ -18,30 +18,32 @@ const (
 )
 
 type simState struct {
-	x, y   float64
-	dx, dy float64
+	pos, dir canvas.Vector
+	width    float64
+	color    color.RGBA
 }
 
 func (state *simState) TransInputs() []float64 {
-	x, y := wrappedLoc(state.x, state.y)
+	pos := wrappedLoc(state.pos)
 	result := []float64{
-		(x/imageWidth*2 - 1),
-		(y/imageHeight*2 - 1),
+		(pos.X/imageWidth*2 - 1),
+		(pos.Y/imageHeight*2 - 1),
 		1,
 	}
 	return result
 }
 
 type networkOutput struct {
-	dx, dy       float64    // vector representing direction of velocity or acceleration in pixels per timestep (squared)
-	acceleration bool       // When true above vector is interperted as acceleration otherwise as velocity
-	color        color.RGBA // Color of line
-	width        float64    // width of line in pixels
+	dir          canvas.Vector // vector representing direction of velocity or acceleration in pixels per timestep (squared)
+	acceleration bool          // When true above vector is interperted as acceleration otherwise as velocity
+	color        color.RGBA    // Color of line
+	width        float64       // width of line in pixels
 }
 
 func (output *networkOutput) TransOutputs(outputSlice []float64) {
-	output.dx = outputSlice[0] * velocityLimit
-	output.dy = outputSlice[1] * velocityLimit
+	output.dir = canvas.Vector{}
+	output.dir.X = outputSlice[0] * velocityLimit
+	output.dir.Y = outputSlice[1] * velocityLimit
 	output.acceleration = outputSlice[2] > 0
 	r := uint8(((outputSlice[3] + 1) / 2) * 255)
 	g := uint8(((outputSlice[4] + 1) / 2) * 255)
@@ -52,28 +54,33 @@ func (output *networkOutput) TransOutputs(outputSlice []float64) {
 }
 
 func performAction(output *networkOutput, state *simState, c canvas.Canvas) {
-	oldX, oldY := state.x, state.y
+	oldPos := state.pos
+	oldDir := state.dir
+	var acc canvas.Vector
 	if output.acceleration {
-		state.dx += output.dx
-		state.dy += output.dy
-		state.dx = applyLimit(state.dx, velocityLimit)
-		state.dy = applyLimit(state.dy, velocityLimit)
+		acc = output.dir
+		state.dir = state.dir.Add(acc)
 	} else {
-		state.dx = output.dx
-		state.dy = output.dy
+		acc = output.dir.Sub(state.dir)
+		state.dir = output.dir
 	}
-	state.x += state.dx
-	state.y += state.dy
-	x1, y1 := wrappedLoc(oldX, oldY)
-	x2, y2 := wrappedLoc(state.x, state.y)
-	width := output.width
-	r, g, b, a := output.color.R, output.color.G, output.color.B, output.color.A
+	state.dir.X = applyLimit(state.dir.X, velocityLimit)
+	state.dir.Y = applyLimit(state.dir.Y, velocityLimit)
+
+	// calculate new position y = y0 + v0*t + 1/2*a*t^2
+	state.pos = state.pos.Add(state.dir).Add(acc.Mul(0.5))
+	posDelta := state.pos.Sub(oldPos)
+
+	from := wrappedLoc(oldPos)
+	to := wrappedLoc(state.pos)
 	// We draw the line in two pieces (if needed) to prevent drawing accros the image border
 	// forward from the current location and backward from the next location
-	c.Line(x1, y1, x1+state.dx, y1+state.dy, width, r, g, b, a)
-	if x1+state.dx != x2 || y1+state.dy != y2 {
-		c.Line(x2-state.dx, y2-state.dy, x2, y2, width, r, g, b, a)
+	c.Line(from, from.Add(posDelta), oldDir, state.dir, state.width, output.width, state.color, output.color)
+	if from.Add(posDelta) != state.pos {
+		c.Line(to.Sub(posDelta), to, oldDir, state.dir, state.width, output.width, state.color, output.color)
 	}
+	state.width = output.width
+	state.color = output.color
 }
 
 func applyLimit(val, limit float64) float64 {
@@ -86,8 +93,8 @@ func applyLimit(val, limit float64) float64 {
 	return val
 }
 
-func wrappedLoc(x, y float64) (float64, float64) {
-	return modPos(x, imageWidth), modPos(y, imageHeight)
+func wrappedLoc(pos canvas.Vector) canvas.Vector {
+	return canvas.Vector{modPos(pos.X, imageWidth), modPos(pos.Y, imageHeight)}
 }
 
 func modPos(n float64, d float64) float64 {
@@ -101,9 +108,11 @@ func modPos(n float64, d float64) float64 {
 func Simulate(net network.Network, c canvas.Canvas) {
 	c.Open(imageWidth, imageHeight)
 	defer c.Close()
-	initialX := imageWidth / 2.0
-	initialY := imageHeight / 2.0
-	state := &simState{x: initialX, y: initialY, dx: 0, dy: 0}
+	initialPos := canvas.Vector{imageWidth / 2.0, imageHeight / 2.0}
+	state := &simState{pos: initialPos,
+		dir:   canvas.Vector{1, 1},
+		width: 10,
+		color: color.RGBA{0, 0, 0, 0}}
 	for t := 0; t < steps; t++ {
 		var output = &networkOutput{}
 		net.Activate(state, output)
