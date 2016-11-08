@@ -69,22 +69,27 @@ func (c canvas) Line(start, end, startDir, endDir Vector, startWidth, endWidth f
 	startLeft := start.Add(startDirNorm.PerpendicularCounterClock().Mul(startWidth / 2))
 	startRight := start.Add(startDirNorm.PerpendicularClock().Mul(startWidth / 2))
 
+	leftC := startLeft.Add(startDir.Mul(0.5))
+
 	endDirNorm := endDir.Norm()
 	endLeft := end.Add(endDirNorm.PerpendicularCounterClock().Mul(endWidth / 2))
 	endRight := end.Add(endDirNorm.PerpendicularClock().Mul(endWidth / 2))
 
+	rightC := endRight.Sub(startDir.Mul(0.5))
+
 	fmt.Fprintf(c.writer, `
 <!-- %v %v %v %v %v %v -->
 <path d="M %v 
+		 Q %v %v
 		 L %v
-		 L %v
-		 L %v Z" 
+		 Q %v %v
+		 Z" 
 	  stroke="none" fill="rgb(%v,%v,%v)"/>`,
 		startWidth, endWidth, start, end, startDirNorm, endDirNorm,
 		startLeft.AsPath(),
-		endLeft.AsPath(),
+		leftC.AsPath(), endLeft.AsPath(),
 		endRight.AsPath(),
-		startRight.AsPath(),
+		rightC.AsPath(), startRight.AsPath(),
 		endColor.R, endColor.G, endColor.B)
 }
 
