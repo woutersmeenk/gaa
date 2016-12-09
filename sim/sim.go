@@ -5,6 +5,7 @@ import (
 	"gaa/network"
 	"image/color"
 	"math"
+	"time"
 )
 
 const (
@@ -114,6 +115,9 @@ func Simulate(net network.Network, c canvas.Canvas) {
 		width: 10,
 		color: color.RGBA{0, 0, 0, 0}}
 	for t := 0; t < steps; t++ {
+		if t%10 == 0 {
+			time.Sleep(0 * time.Second)
+		}
 		var output = &networkOutput{}
 		net.Activate(state, output)
 		performAction(output, state, c)

@@ -40,10 +40,6 @@ func (v Vector) PerpendicularCounterClock() Vector {
 	return Vector{v.Y, -v.X}
 }
 
-func (v Vector) AsPath() string {
-	return fmt.Sprintf("%v %v", v.X, v.Y)
-}
-
 type canvas struct {
 	writer io.Writer
 }
@@ -59,7 +55,7 @@ func New(writer io.Writer) Canvas {
 }
 
 func (c canvas) Open(width, height int) {
-	fmt.Fprintf(c.writer, "<svg width=\"%v\" height=\"%v\" xmlns=\"http://www.w3.org/2000/svg\">\n", width, height)
+	fmt.Fprintf(c.writer, `<svg viewBox="0 0 %v %v" xmlns="http://www.w3.org/2000/svg\">`, width, height)
 }
 
 func (c canvas) Line(start, end, startDir, endDir Vector, startWidth, endWidth float64, startColor, endColor color.RGBA) {
@@ -78,18 +74,16 @@ func (c canvas) Line(start, end, startDir, endDir Vector, startWidth, endWidth f
 	rightC := endRight.Sub(startDir.Mul(0.5))
 
 	fmt.Fprintf(c.writer, `
-<!-- %v %v %v %v %v %v -->
-<path d="M %v 
-		 Q %v %v
-		 L %v
-		 Q %v %v
+<path d="M %v %v 
+		 Q %v %v %v %v
+		 L %v %v
+		 Q %v %v %v %v
 		 Z" 
 	  stroke="none" fill="rgb(%v,%v,%v)"/>`,
-		startWidth, endWidth, start, end, startDirNorm, endDirNorm,
-		startLeft.AsPath(),
-		leftC.AsPath(), endLeft.AsPath(),
-		endRight.AsPath(),
-		rightC.AsPath(), startRight.AsPath(),
+		startLeft.X, startLeft.Y,
+		leftC.X, leftC.Y, endLeft.X, endLeft.Y,
+		endRight.X, endRight.Y,
+		rightC.X, rightC.Y, startRight.X, startRight.Y,
 		endColor.R, endColor.G, endColor.B)
 }
 
