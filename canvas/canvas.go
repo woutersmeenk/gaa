@@ -3,8 +3,9 @@ package canvas
 import (
 	"fmt"
 	"image/color"
-	"io"
 	"math"
+
+	"honnef.co/go/js/dom"
 )
 
 type Vector struct {
@@ -41,21 +42,23 @@ func (v Vector) PerpendicularCounterClock() Vector {
 }
 
 type canvas struct {
-	writer io.Writer
+	canvas *dom.HTMLCanvasElement
 }
 
 type Canvas interface {
-	Open(width, height int)
 	Line(start, end, startDir, endDir Vector, startWidth, endWidth float64, startColor, endColor color.RGBA)
-	Close()
+	GetHTMLCanvas() *dom.HTMLCanvasElement
 }
 
-func New(writer io.Writer) Canvas {
-	return canvas{writer}
+func New(doc dom.Document, width, height int) Canvas {
+	htmlCanvas := doc.CreateElement("canvas").(*dom.HTMLCanvasElement)
+	htmlCanvas.Height = height
+	htmlCanvas.Width = width
+	return canvas{htmlCanvas}
 }
 
-func (c canvas) Open(width, height int) {
-	fmt.Fprintf(c.writer, `<svg viewBox="0 0 %v %v" xmlns="http://www.w3.org/2000/svg\">`, width, height)
+func (c canvas) GetHTMLCanvas() *dom.HTMLCanvasElement {
+	return c.canvas
 }
 
 func (c canvas) Line(start, end, startDir, endDir Vector, startWidth, endWidth float64, startColor, endColor color.RGBA) {
@@ -72,21 +75,14 @@ func (c canvas) Line(start, end, startDir, endDir Vector, startWidth, endWidth f
 	endRight := end.Add(endDirNorm.PerpendicularClock().Mul(endWidth / 2))
 
 	rightC := endRight.Sub(startDir.Mul(0.5))
-
-	fmt.Fprintf(c.writer, `
-<path d="M %v %v 
-		 Q %v %v %v %v
-		 L %v %v
-		 Q %v %v %v %v
-		 Z" 
-	  stroke="none" fill="rgb(%v,%v,%v)"/>`,
-		startLeft.X, startLeft.Y,
-		leftC.X, leftC.Y, endLeft.X, endLeft.Y,
-		endRight.X, endRight.Y,
-		rightC.X, rightC.Y, startRight.X, startRight.Y,
-		endColor.R, endColor.G, endColor.B)
-}
-
-func (c canvas) Close() {
-	fmt.Fprint(c.writer, "</svg>\n")
+	ctx := c.canvas.GetContext2d()
+	ctx.BeginPath()
+	ctx.MoveTo(int(startLeft.X), int(startLeft.Y))
+	ctx.QuadraticCurveTo(int(leftC.X), int(leftC.Y), int(endLeft.X), int(endLeft.Y))
+	ctx.LineTo(int(endRight.X), int(endRight.Y))
+	ctx.QuadraticCurveTo(int(rightC.X), int(rightC.Y), int(startRight.X), int(startRight.Y))
+	ctx.ClosePath()
+	ctx.StrokeStyle = "none"
+	ctx.FillStyle = fmt.Sprintf("rgb(%v,%v,%v)", endColor.R, endColor.G, endColor.B)
+	ctx.Fill()
 }

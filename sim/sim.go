@@ -11,8 +11,8 @@ import (
 const (
 	NetworkInputs  = 3
 	NetworkOutputs = 8
-	imageHeight    = 500
-	imageWidth     = 500
+	ImageHeight    = 500
+	ImageWidth     = 500
 	steps          = 1000
 	velocityLimit  = 5
 	maxWidth       = 30
@@ -27,8 +27,8 @@ type simState struct {
 func (state *simState) TransInputs() []float64 {
 	pos := wrappedLoc(state.pos)
 	result := []float64{
-		(pos.X/imageWidth*2 - 1),
-		(pos.Y/imageHeight*2 - 1),
+		(pos.X/ImageWidth*2 - 1),
+		(pos.Y/ImageHeight*2 - 1),
 		1,
 	}
 	return result
@@ -95,7 +95,7 @@ func applyLimit(val, limit float64) float64 {
 }
 
 func wrappedLoc(pos canvas.Vector) canvas.Vector {
-	return canvas.Vector{modPos(pos.X, imageWidth), modPos(pos.Y, imageHeight)}
+	return canvas.Vector{modPos(pos.X, ImageWidth), modPos(pos.Y, ImageHeight)}
 }
 
 func modPos(n float64, d float64) float64 {
@@ -106,20 +106,19 @@ func modPos(n float64, d float64) float64 {
 	return result
 }
 
-func Simulate(net network.Network, c canvas.Canvas) {
-	c.Open(imageWidth, imageHeight)
-	defer c.Close()
-	initialPos := canvas.Vector{imageWidth / 2.0, imageHeight / 2.0}
+func Simulate(net network.Network, c canvas.Canvas, ticks <-chan time.Time) {
+	initialPos := canvas.Vector{ImageWidth / 2.0, ImageHeight / 2.0}
 	state := &simState{pos: initialPos,
 		dir:   canvas.Vector{1, 1},
 		width: 10,
 		color: color.RGBA{0, 0, 0, 0}}
-	for t := 0; t < steps; t++ {
-		if t%10 == 0 {
-			time.Sleep(0 * time.Second)
+	_, ok := <-ticks
+	for ok {
+		for i := 0; i < 5; i++ {
+			var output = &networkOutput{}
+			net.Activate(state, output)
+			performAction(output, state, c)
 		}
-		var output = &networkOutput{}
-		net.Activate(state, output)
-		performAction(output, state, c)
+		_, ok = <-ticks
 	}
 }
