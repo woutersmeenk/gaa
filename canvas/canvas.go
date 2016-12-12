@@ -42,23 +42,15 @@ func (v Vector) PerpendicularCounterClock() Vector {
 }
 
 type canvas struct {
-	canvas *dom.HTMLCanvasElement
+	ctx *dom.CanvasRenderingContext2D
 }
 
 type Canvas interface {
 	Line(start, end, startDir, endDir Vector, startWidth, endWidth float64, startColor, endColor color.RGBA)
-	GetHTMLCanvas() *dom.HTMLCanvasElement
 }
 
-func New(doc dom.Document, width, height int) Canvas {
-	htmlCanvas := doc.CreateElement("canvas").(*dom.HTMLCanvasElement)
-	htmlCanvas.Height = height
-	htmlCanvas.Width = width
-	return canvas{htmlCanvas}
-}
-
-func (c canvas) GetHTMLCanvas() *dom.HTMLCanvasElement {
-	return c.canvas
+func New(ctx *dom.CanvasRenderingContext2D) Canvas {
+	return canvas{ctx}
 }
 
 func (c canvas) Line(start, end, startDir, endDir Vector, startWidth, endWidth float64, startColor, endColor color.RGBA) {
@@ -75,7 +67,7 @@ func (c canvas) Line(start, end, startDir, endDir Vector, startWidth, endWidth f
 	endRight := end.Add(endDirNorm.PerpendicularClock().Mul(endWidth / 2))
 
 	rightC := endRight.Sub(startDir.Mul(0.5))
-	ctx := c.canvas.GetContext2d()
+	ctx := c.ctx
 	ctx.BeginPath()
 	ctx.MoveTo(int(startLeft.X), int(startLeft.Y))
 	ctx.QuadraticCurveTo(int(leftC.X), int(leftC.Y), int(endLeft.X), int(endLeft.Y))

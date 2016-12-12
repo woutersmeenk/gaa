@@ -13,7 +13,6 @@ const (
 	NetworkOutputs = 8
 	ImageHeight    = 500
 	ImageWidth     = 500
-	steps          = 1000
 	velocityLimit  = 5
 	maxWidth       = 30
 )

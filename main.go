@@ -23,10 +23,12 @@ func main() {
 		extraSeed := int64(i)
 		r := rand.New(rand.NewSource(seed + extraSeed))
 		net := network.New(sim.NetworkInputs, sim.NetworkOutputs, hiddenNeurons, r)
-		cv := canvas.New(doc, sim.ImageHeight, sim.ImageWidth)
-		htmlCv := cv.GetHTMLCanvas()
-		htmlCv.SetAttribute("style", "width: 300; height: 300; border: 1px solid #dcdcdc; margin: 2px")
-		body.AppendChild(htmlCv)
+		htmlCanvas := doc.CreateElement("canvas").(*dom.HTMLCanvasElement)
+		htmlCanvas.Height = sim.ImageHeight
+		htmlCanvas.Width = sim.ImageWidth
+		htmlCanvas.SetAttribute("style", "width: 300; height: 300; border: 1px solid #dcdcdc; margin: 2px")
+		body.AppendChild(htmlCanvas)
+		cv := canvas.New(htmlCanvas.GetContext2d())
 		go func() {
 			sim.Simulate(net, cv, ticker.C)
 		}()
