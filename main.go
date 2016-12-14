@@ -27,8 +27,8 @@ type window struct {
 	cv     canvas.Canvas
 }
 
-func newWindow(seed int64, ctx *dom.CanvasRenderingContext2D) window {
-	rnd := rand.New(rand.NewSource(seed))
+func newWindow(id int, params parameters, ctx *dom.CanvasRenderingContext2D) window {
+	rnd := rand.New(rand.NewSource(params.seed + int64(id)))
 	net := network.New(sim.NetworkInputs, sim.NetworkOutputs, hiddenNeurons, rnd)
 	cv := canvas.New(ctx)
 	return window{rnd, nil, net, cv}
@@ -47,12 +47,12 @@ func (w window) stop() {
 
 var windows [16]window
 
-type params struct {
+type parameters struct {
 	seed  int64
 	steps []int
 }
 
-func decodeQueryString() (result params, err error) {
+func decodeQueryString() (result parameters, err error) {
 	qs := dom.GetWindow().Location().Search[1:]
 	for _, keyValue := range strings.Split(qs, "&") {
 		kva := strings.Split(keyValue, "=")
@@ -79,7 +79,7 @@ func decodeQueryString() (result params, err error) {
 	return result, nil
 }
 
-func encodeQueryString(p params) string {
+func encodeQueryString(p parameters) string {
 	var steps []byte
 	for _, step := range p.steps {
 		steps = strconv.AppendInt(steps, int64(step), 16)
@@ -88,42 +88,44 @@ func encodeQueryString(p params) string {
 	return fmt.Sprintf("seed=%v&steps=%v", seed, string(steps))
 }
 
-func addStep(p params, step int) (result params) {
+func addStep(p parameters, step int) (result parameters) {
 	result.seed = p.seed
 	result.steps = make([]int, len(p.steps))
 	copy(result.steps, p.steps)
-	print("====")
-	println(result.steps)
 	result.steps = append(result.steps, step)
-	println(result.steps)
 	return result
 }
 
 func main() {
-	p, err := decodeQueryString()
+	params, err := decodeQueryString()
 	if err != nil {
 		panic(err)
 	}
-	if p.seed == 0 {
-		p.seed = time.Now().UnixNano()
+	if params.seed == 0 {
+		params.seed = time.Now().UnixNano()
+		dom.GetWindow().Location().Search = encodeQueryString(params)
 	}
 	doc := dom.GetWindow().Document()
 	body := doc.GetElementByID("body")
-	for i := 0; i < 16; i++ {
-		extraSeed := int64(i)
+	lastStep := -1
+	if len(params.steps) > 0 {
+		lastStep = params.steps[len(params.steps)-1]
+	}
+	for windowID := 0; windowID < 16; windowID++ {
 		htmlCanvas := doc.CreateElement("canvas").(*dom.HTMLCanvasElement)
 		htmlCanvas.Height = sim.ImageHeight
 		htmlCanvas.Width = sim.ImageWidth
 		htmlCanvas.SetAttribute("style", "width: 300; height: 300; border: 1px solid #dcdcdc; margin: 2px")
-		println(p.steps)
-		println(addStep(p, i).steps)
-
-		qs := encodeQueryString(addStep(p, i))
+		newParams := params
+		if lastStep != windowID {
+			newParams = addStep(params, windowID)
+		}
+		qs := encodeQueryString(newParams)
 		link := doc.CreateElement("a").(*dom.HTMLAnchorElement)
 		link.Href = "index.html?" + qs
 		link.AppendChild(htmlCanvas)
 		body.AppendChild(link)
-		windows[i] = newWindow(p.seed+extraSeed, htmlCanvas.GetContext2d())
-		windows[i].start()
+		windows[windowID] = newWindow(windowID, params, htmlCanvas.GetContext2d())
+		windows[windowID].start()
 	}
 }
