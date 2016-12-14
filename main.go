@@ -1,12 +1,13 @@
 package main
 
 import (
-	"gaa/canvas"
-	"gaa/network"
-	"gaa/sim"
 	"math/rand"
 	"strings"
 	"time"
+
+	"github.com/woutersmeenk/gaa/canvas"
+	"github.com/woutersmeenk/gaa/network"
+	"github.com/woutersmeenk/gaa/sim"
 
 	"strconv"
 

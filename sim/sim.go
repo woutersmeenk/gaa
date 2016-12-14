@@ -1,11 +1,12 @@
 package sim
 
 import (
-	"gaa/canvas"
-	"gaa/network"
 	"image/color"
 	"math"
 	"time"
+
+	"github.com/woutersmeenk/gaa/canvas"
+	"github.com/woutersmeenk/gaa/network"
 )
 
 const (
