@@ -15,6 +15,7 @@ type network struct {
 
 type Network interface {
 	Activate(input InputTranslator, output OutputTranslator)
+	Mutate(r *rand.Rand) Network
 }
 
 type InputTranslator interface {
@@ -39,24 +40,28 @@ func New(numInputs, numOutputs, numHiddenNeurons int, r *rand.Rand) Network {
 	return &network{numInputs, numOutputs, numHiddenNeurons, neuronValues, neuronWeights}
 }
 
-func (net *network) Activate(input InputTranslator, output OutputTranslator) {
+func (n *network) Activate(input InputTranslator, output OutputTranslator) {
 	inputs := input.TransInputs()
-	numNeurons := len(net.neuronValues)
+	numNeurons := len(n.neuronValues)
 	newNeuronValues := make([]float64, numNeurons)
-	for i := 0; i < net.numInputs; i++ {
-		net.neuronValues[i] = inputs[i]
+	for i := 0; i < n.numInputs; i++ {
+		n.neuronValues[i] = inputs[i]
 		newNeuronValues[i] = inputs[i]
 		if inputs[i] > 1 || inputs[i] < -1 {
-			panic(fmt.Errorf("Invalid input: %v network: %v", input, net))
+			panic(fmt.Errorf("Invalid input: %v network: %v", input, n))
 		}
 	}
-	for from := net.numInputs; from < numNeurons; from++ {
+	for from := n.numInputs; from < numNeurons; from++ {
 		for to := 0; to < numNeurons; to++ {
-			newNeuron := net.neuronWeights[from][to] * net.neuronValues[to]
+			newNeuron := n.neuronWeights[from][to] * n.neuronValues[to]
 			newNeuronValues[from] += newNeuron
 		}
 		newNeuronValues[from] = math.Tanh(newNeuronValues[from])
 	}
-	net.neuronValues = newNeuronValues
-	output.TransOutputs(net.neuronValues[net.numInputs : net.numInputs+net.numOutputs])
+	n.neuronValues = newNeuronValues
+	output.TransOutputs(n.neuronValues[n.numInputs : n.numInputs+n.numOutputs])
+}
+
+func (n *network) Mutate(r *rand.Rand) Network {
+	return n
 }
