@@ -63,5 +63,19 @@ func (n *network) Activate(input InputTranslator, output OutputTranslator) {
 }
 
 func (n *network) Mutate(r *rand.Rand) Network {
-	return n
+	numNeurons := n.numInputs + n.numOutputs + n.numHiddenNeurons
+	newNet := &network{n.numInputs, n.numOutputs, n.numHiddenNeurons, nil, nil}
+	newNet.neuronValues = make([]float64, len(n.neuronValues))
+	copy(newNet.neuronValues, n.neuronValues)
+	newNet.neuronWeights = make([][]float64, len(n.neuronWeights))
+	for i := 0; i < len(n.neuronWeights); i++ {
+		newNet.neuronWeights[i] = make([]float64, len(n.neuronWeights[i]))
+		copy(newNet.neuronWeights[i], n.neuronWeights[i])
+	}
+	for i := 0; i < 10; i++ {
+		from := r.Intn(numNeurons-n.numInputs) + n.numInputs
+		to := r.Intn(numNeurons)
+		newNet.neuronWeights[from][to] = r.Float64()*2 - 1
+	}
+	return newNet
 }

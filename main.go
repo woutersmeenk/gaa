@@ -21,17 +21,26 @@ const (
 )
 
 type window struct {
-	rnd    *rand.Rand
 	ticker *time.Ticker
 	net    network.Network
 	cv     canvas.Canvas
 }
 
 func newWindow(id int, params parameters, ctx *dom.CanvasRenderingContext2D) window {
-	rnd := rand.New(rand.NewSource(params.seed + int64(id)))
-	net := network.New(sim.NetworkInputs, sim.NetworkOutputs, hiddenNeurons, rnd)
+	var net network.Network
+	seed := params.seed
+	println(params.steps)
+	for _, step := range params.steps {
+		seed += int64(step)
+		rnd := rand.New(rand.NewSource(seed))
+		if net == nil {
+			net = network.New(sim.NetworkInputs, sim.NetworkOutputs, hiddenNeurons, rnd)
+		} else {
+			net = net.Mutate(rnd)
+		}
+	}
 	cv := canvas.New(ctx)
-	return window{rnd, nil, net, cv}
+	return window{nil, net, cv}
 }
 
 func (w window) start() {
@@ -68,7 +77,7 @@ func decodeQueryString() (result parameters, err error) {
 		}
 		if key == "steps" {
 			for _, step := range value {
-				intStep, err := strconv.ParseInt(string(step), 16, 4)
+				intStep, err := strconv.ParseUint(string(step), 16, 4)
 				if err != nil {
 					return result, err
 				}
@@ -125,7 +134,7 @@ func main() {
 		link.Href = "index.html?" + qs
 		link.AppendChild(htmlCanvas)
 		body.AppendChild(link)
-		windows[windowID] = newWindow(windowID, params, htmlCanvas.GetContext2d())
+		windows[windowID] = newWindow(windowID, newParams, htmlCanvas.GetContext2d())
 		windows[windowID].start()
 	}
 }
