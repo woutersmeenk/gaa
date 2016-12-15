@@ -20,6 +20,8 @@ const (
 	hiddenNeurons = 10
 )
 
+var windows [16]*window
+
 type window struct {
 	ticker *time.Ticker
 	net    network.Network
@@ -29,7 +31,6 @@ type window struct {
 func newWindow(id int, params parameters, ctx *dom.CanvasRenderingContext2D) window {
 	var net network.Network
 	seed := params.seed
-	println(params.steps)
 	for _, step := range params.steps {
 		seed += int64(step)
 		rnd := rand.New(rand.NewSource(seed))
@@ -43,18 +44,18 @@ func newWindow(id int, params parameters, ctx *dom.CanvasRenderingContext2D) win
 	return window{nil, net, cv}
 }
 
-func (w window) start() {
+func (w *window) start() {
 	w.ticker = time.NewTicker(30 * time.Millisecond)
 	go func() {
 		sim.Simulate(w.net, w.cv, w.ticker.C)
 	}()
 }
 
-func (w window) stop() {
-	w.ticker.Stop()
+func stopAllWindows() {
+	for _, win := range windows {
+		win.ticker.Stop()
+	}
 }
-
-var windows [16]window
 
 type parameters struct {
 	seed  int64
@@ -88,7 +89,7 @@ func decodeQueryString() (result parameters, err error) {
 	return result, nil
 }
 
-func encodeQueryString(p parameters) string {
+func (p parameters) encodeQueryString() string {
 	var steps []byte
 	for _, step := range p.steps {
 		steps = strconv.AppendInt(steps, int64(step), 16)
@@ -97,7 +98,7 @@ func encodeQueryString(p parameters) string {
 	return fmt.Sprintf("seed=%v&steps=%v", seed, string(steps))
 }
 
-func addStep(p parameters, step int) (result parameters) {
+func (p parameters) addStep(step int) (result parameters) {
 	result.seed = p.seed
 	result.steps = make([]int, len(p.steps))
 	copy(result.steps, p.steps)
@@ -112,29 +113,38 @@ func main() {
 	}
 	if params.seed == 0 {
 		params.seed = time.Now().UnixNano()
-		dom.GetWindow().Location().Search = encodeQueryString(params)
+		dom.GetWindow().Location().Search = params.encodeQueryString()
 	}
 	doc := dom.GetWindow().Document()
-	body := doc.GetElementByID("body")
+	stopLink := doc.GetElementByID("stop")
+	stopLink.AddEventListener("click", false, func(e dom.Event) {
+		stopAllWindows()
+	})
+	windowsEl := doc.GetElementByID("windows")
 	lastStep := -1
 	if len(params.steps) > 0 {
 		lastStep = params.steps[len(params.steps)-1]
 	}
 	for windowID := 0; windowID < 16; windowID++ {
 		htmlCanvas := doc.CreateElement("canvas").(*dom.HTMLCanvasElement)
+		link := doc.CreateElement("a").(*dom.HTMLAnchorElement)
+		link.AppendChild(htmlCanvas)
+		windowsEl.AppendChild(link)
+
 		htmlCanvas.Height = sim.ImageHeight
 		htmlCanvas.Width = sim.ImageWidth
-		htmlCanvas.SetAttribute("style", "width: 300; height: 300; border: 1px solid #dcdcdc; margin: 2px")
+		htmlCanvas.SetClass("window-selected")
+
 		newParams := params
 		if lastStep != windowID {
-			newParams = addStep(params, windowID)
+			newParams = params.addStep(windowID)
+			htmlCanvas.SetClass("window-not-selected")
 		}
-		qs := encodeQueryString(newParams)
-		link := doc.CreateElement("a").(*dom.HTMLAnchorElement)
-		link.Href = "index.html?" + qs
-		link.AppendChild(htmlCanvas)
-		body.AppendChild(link)
-		windows[windowID] = newWindow(windowID, newParams, htmlCanvas.GetContext2d())
+
+		link.Href = "index.html?" + newParams.encodeQueryString()
+
+		win := newWindow(windowID, newParams, htmlCanvas.GetContext2d())
+		windows[windowID] = &win
 		windows[windowID].start()
 	}
 }

@@ -1,0 +1,21 @@
+body {
+    font-family: monospace;
+}
+
+.center {
+    text-align: center;
+}
+
+.window-not-selected {
+    width: 300; 
+    height: 300;
+    border: 1px solid #dcdcdc;
+    margin: 2px;
+}
+
+.window-selected {
+    width: 300; 
+    height: 300;
+    border: 2px solid #15ff32;
+    margin: 1px;
+}
