@@ -1,13 +1,11 @@
 package sim
 
 import (
-	"gaa/canvas"
-	"gaa/network"
 	"image/color"
-	"io/ioutil"
-	"math/rand"
 	"reflect"
 	"testing"
+
+	"github.com/woutersmeenk/gaa/canvas"
 )
 
 var modPosTests = []struct {
@@ -34,11 +32,11 @@ var transInputTests = []struct {
 	state simState
 	res   []float64
 }{
-	{simState{-1, -1, 0, 0}, []float64{1, 1, 1}},
-	{simState{0, 0, 0, 0}, []float64{-1, -1, 1}},
-	{simState{imageWidth - 1, imageHeight - 1, 0, 0}, []float64{1, 1, 1}},
-	{simState{imageWidth / 2, imageHeight / 2, 0, 0}, []float64{0, 0, 1}},
-	{simState{imageWidth, imageHeight, 0, 0}, []float64{-1, -1, 1}},
+	{simState{canvas.Vector{-1, -1}, canvas.Vector{}, 0, color.RGBA{}}, []float64{0.996, 0.996, 1}},
+	{simState{canvas.Vector{0, 0}, canvas.Vector{}, 0, color.RGBA{}}, []float64{-1, -1, 1}},
+	{simState{canvas.Vector{ImageWidth - 1, ImageHeight - 1}, canvas.Vector{}, 0, color.RGBA{}}, []float64{0.996, 0.996, 1}},
+	{simState{canvas.Vector{ImageWidth / 2, ImageHeight / 2}, canvas.Vector{}, 0, color.RGBA{}}, []float64{0, 0, 1}},
+	{simState{canvas.Vector{ImageWidth, ImageHeight}, canvas.Vector{}, 0, color.RGBA{}}, []float64{-1, -1, 1}},
 }
 
 func TestTransInputs(t *testing.T) {
@@ -54,9 +52,9 @@ var transOutputTests = []struct {
 	output []float64
 	res    networkOutput
 }{
-	{[]float64{-1, -1, -1, -1, -1, -1, -1, -1}, networkOutput{-velocityLimit, -velocityLimit, false, color.RGBA{0, 0, 0, 0}, 0}},
-	{[]float64{1, 1, 1, 1, 1, 1, 1, 1}, networkOutput{velocityLimit, velocityLimit, true, color.RGBA{255, 255, 255, 255}, maxWidth}},
-	{[]float64{0, 0, 0, 0, 0, 0, 0, 0}, networkOutput{0, 0, false, color.RGBA{127, 127, 127, 127}, maxWidth / 2}},
+	{[]float64{-1, -1, -1, -1, -1, -1, -1, -1}, networkOutput{canvas.Vector{-velocityLimit, -velocityLimit}, false, color.RGBA{0, 0, 0, 0}, 0}},
+	{[]float64{1, 1, 1, 1, 1, 1, 1, 1}, networkOutput{canvas.Vector{velocityLimit, velocityLimit}, true, color.RGBA{255, 255, 255, 255}, maxWidth}},
+	{[]float64{0, 0, 0, 0, 0, 0, 0, 0}, networkOutput{canvas.Vector{0, 0}, false, color.RGBA{127, 127, 127, 127}, maxWidth / 2}},
 }
 
 func TestTransOutput(t *testing.T) {
@@ -66,13 +64,5 @@ func TestTransOutput(t *testing.T) {
 		if !reflect.DeepEqual(res, tt.res) {
 			t.Errorf("TransOutputs(%v) = %v want %v", tt.output, res, tt.res)
 		}
-	}
-}
-
-func BenchmarkSimulate(b *testing.B) {
-	r := rand.New(rand.NewSource(328932186))
-	for n := 0; n < b.N; n++ {
-		net := network.New(3, 8, 10, r)
-		Simulate(net, canvas.New(ioutil.Discard))
 	}
 }
